@@ -58,7 +58,7 @@ US$PercShift <- US$PercMargin.2020 - US$PercMargin.2016
 
 
 ### Function for Mapping: ###
-StateMaps <- function(state,outfile=NULL,cities=NULL,scalea=10000,scaleb=0.025) {
+StateMaps <- function(state,outfile=NULL,cities=NULL,scalea=10000,scaleb=0.025,hjust=0.5,vjust=1.5) {
   data <- US %>% filter(State==state)
   DF.shift <- data %>% mutate(region=as.numeric(FIPS), value=Shift) %>% select(region,value)
   DF.perc <- data %>% mutate(region=as.numeric(FIPS), value=PercShift) %>% select(region,value)
@@ -89,7 +89,7 @@ StateMaps <- function(state,outfile=NULL,cities=NULL,scalea=10000,scaleb=0.025) 
                                         size=1, color="black") +
       geom_text(data=cit,
                 aes(x=Longitude,y=Latitude,label=City), inherit.aes=FALSE,
-                color="black",vjust=1.5,size=2)
+                color="black",hjust=hjust,vjust=vjust,size=2)
   }
   map.perc <- county_choropleth(df=DF.perc, title="", num_colors=0,
                     county_zoom=DF.perc$region)+
@@ -106,14 +106,14 @@ StateMaps <- function(state,outfile=NULL,cities=NULL,scalea=10000,scaleb=0.025) 
                                         size=1, color="black") +
       geom_text(data=cit,
                  aes(x=Longitude,y=Latitude,label=City), inherit.aes=FALSE,
-                 color="black",vjust=1.5,size=2)
+                 color="black",hjust=hjust,vjust=vjust,size=2)
   }
   if(!is.null(outfile)) {
     ggsave(filename=paste0(plot_wd,outfile,".png"),
           plot=map.shift+map.perc,
           width=8,height=4, units="in", dpi=300)
   }
-  return(map.shift+map.perc)
+  return(list(Shift=map.shift,Perc=map.perc))
 }
 
 ### Creation of Maps: ###
@@ -135,6 +135,21 @@ StateMaps(state="Georgia",outfile="Maps_GA",
 StateMaps(state="New York",outfile="Maps_NY",
           cities=Cities,
           scalea=10000,scaleb=0.05)
+
+Fig2AB <- StateMaps("Michigan",outfile=NULL,
+                    cities=Cities,
+                    scalea=10000,scaleb=0.025,
+                    hjust=-0.1, vjust=0.5)
+Fig2CD <- StateMaps(state="Arizona",outfile=NULL,
+                    cities=Cities,
+                    scalea=20000,scaleb=0.05,
+                    hjust=-0.1, vjust=0.5)
+ggsave(filename=paste0(plot_wd,"Fig2.png"),
+       plot=Fig2AB$Shift+labs(subtitle="(a)", title="Change in Vote Margin")+theme(plot.title=element_text(hjust=1))+
+         Fig2AB$Perc+labs(subtitle="(b)", title="Change in Percentage Margin")+theme(plot.title=element_text(hjust=1))+
+         Fig2CD$Shift+labs(subtitle="(c)", title=NULL)+
+         Fig2CD$Perc+labs(subtitle="(d)", title=NULL),
+       width=7, height=7, units="in", dpi=300)
 
 ### Function for Combining 2016 and 2020 Data: ###
 Summaries <- function(data) {
