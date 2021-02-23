@@ -45,7 +45,7 @@ StateMaps <- function(state,cities=NULL,scalea=10000,scaleb=0.025,focus.county=N
     }
     map.shift <- county_choropleth(df=DF.shift, title="", num_colors=0,
                                    county_zoom=DF.shift$region)+
-        labs(title="A) Change in Vote Margin")+theme(title=element_text(size=10))+
+        labs(title="Change in Vote Margin")+theme(title=element_text(size=14))+
         scale_fill_gradient2(name=NULL,
                              low="#b2182b",mid="#f7f7f7",high="#2166ac",midpoint=0,
                              breaks=seq(-200000,200000,by=scalea),
@@ -64,7 +64,7 @@ StateMaps <- function(state,cities=NULL,scalea=10000,scaleb=0.025,focus.county=N
     }
     map.perc <- county_choropleth(df=DF.perc, title="", num_colors=0,
                                   county_zoom=DF.perc$region)+
-        labs(title="B) Change in Percentage Margin")+theme(title=element_text(size=10))+
+        labs(title="Change in Percentage Margin")+theme(title=element_text(size=14))+
         scale_fill_gradient2(name=NULL,
                              low="#b2182b",mid="#f7f7f7",high="#2166ac",midpoint=0,
                              breaks=seq(-.5,.5,by=scaleb),
@@ -145,7 +145,7 @@ Plotting <- function(data, ylim, scale_amt, buffer, labsize=NULL) {
         guides(color=FALSE) +
         theme_classic() +
         theme(legend.position="bottom", axis.line.x=element_blank(), axis.ticks.x=element_blank(),
-              axis.text.x=element_text(size=12))
+              axis.text.x=element_text(size=12), title=element_text(size=14))
     plot
 }
 
@@ -174,7 +174,7 @@ ui <- fluidPage(
         mainPanel(
            plotOutput("Map1", width="90%"),
            plotOutput("Map2", width="90%"),
-           plotOutput("Bar", width="90%")
+           plotOutput("Bar", width="80%")
         )
     )
 )
