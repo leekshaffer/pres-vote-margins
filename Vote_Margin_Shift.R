@@ -3,6 +3,7 @@ require(tidyverse)
 require(patchwork)
 require(readxl)
 require(ggthemes)
+require(ggrepel)
 require(choroplethr)
 require(choroplethrMaps)
 
@@ -87,9 +88,9 @@ StateMaps <- function(state,outfile=NULL,cities=NULL,scalea=10000,scaleb=0.025,h
     map.shift <- map.shift + geom_point(data=cit,
                                         aes(x=Longitude,y=Latitude), inherit.aes=FALSE,
                                         size=1, color="black") +
-      geom_text(data=cit,
-                aes(x=Longitude,y=Latitude,label=City), inherit.aes=FALSE,
-                color="black",hjust=hjust,vjust=vjust,size=2)
+      geom_text_repel(data=cit,
+                aes(x=Longitude,y=Latitude,label=City), inherit.aes=FALSE, size=2.8, box.padding=.13) #,
+                # color="black", hjust=hjust, vjust=vjust, position="dodge")
   }
   map.perc <- county_choropleth(df=DF.perc, title="", num_colors=0,
                     county_zoom=DF.perc$region)+
@@ -104,9 +105,9 @@ StateMaps <- function(state,outfile=NULL,cities=NULL,scalea=10000,scaleb=0.025,h
     map.perc <- map.perc + geom_point(data=cit,
                                         aes(x=Longitude,y=Latitude), inherit.aes=FALSE,
                                         size=1, color="black") +
-      geom_text(data=cit,
-                 aes(x=Longitude,y=Latitude,label=City), inherit.aes=FALSE,
-                 color="black",hjust=hjust,vjust=vjust,size=2)
+      geom_text_repel(data=cit,
+                 aes(x=Longitude,y=Latitude,label=City), inherit.aes=FALSE, size=2.8, box.padding=.13) #,
+                 # color="black",hjust=hjust,vjust=vjust,size=3, position="dodge")
   }
   if(!is.null(outfile)) {
     ggsave(filename=paste0(plot_wd,outfile,".png"),
@@ -139,17 +140,17 @@ StateMaps(state="New York",outfile="Maps_NY",
 Fig2AB <- StateMaps("Michigan",outfile=NULL,
                     cities=Cities,
                     scalea=10000,scaleb=0.025,
-                    hjust=-0.1, vjust=0.5)
+                    hjust=1.1, vjust=0.5)
 Fig2CD <- StateMaps(state="Arizona",outfile=NULL,
                     cities=Cities,
                     scalea=20000,scaleb=0.05,
-                    hjust=-0.1, vjust=0.5)
-ggsave(filename=paste0(plot_wd,"Fig2.png"),
+                    hjust=1.1, vjust=0.5)
+ggsave(filename=paste0(plot_wd,"Fig2.eps"),
        plot=Fig2AB$Shift+labs(subtitle="(a)", title="Change in Vote Margin")+theme(plot.title=element_text(hjust=1))+
          Fig2AB$Perc+labs(subtitle="(b)", title="Change in Percentage Margin")+theme(plot.title=element_text(hjust=1))+
          Fig2CD$Shift+labs(subtitle="(c)", title=NULL)+
          Fig2CD$Perc+labs(subtitle="(d)", title=NULL),
-       width=7, height=7, units="in", dpi=300)
+       width=7, height=7, units="in")
 
 ### Function for Combining 2016 and 2020 Data: ###
 Summaries <- function(data) {
@@ -202,8 +203,8 @@ Data_Plotting <- function(data) {
   Plot_data <- data %>% select(D.16,D.20,R.16,R.20,O.16,O.20,D.Diff,R.Diff,O.Diff) %>% 
     pivot_longer(cols=c(D.16,D.20,R.16,R.20,O.16,O.20,D.Diff,R.Diff,O.Diff), names_to="Type") %>%
     mutate(Party=substr(Type,1,1),Year=substr(Type,3,nchar(Type))) %>%
-    mutate(Year_Factor=factor(Year, levels=c("16","20","Diff"), labels=c("2016","2020",paste0("Difference, 2020","\U2212","2016"))),
-           Party_Factor=factor(Party, levels=c("O","R","D"), labels=c("O","R","D")))
+    mutate(Year_Factor=factor(Year, levels=c("16","20","Diff"), labels=c("2016","2020",paste0("Difference, 2020-2016"))),
+           Party_Factor=factor(Party, levels=c("D","R","O"), labels=c("D","R","O")))
   Plot_data2 <- Plot_data %>%
     left_join(Plot_data %>% select(Year,value) %>% group_by(Year) %>% summarize(sum=sum(value)) %>% ungroup(),
               by="Year") %>%
@@ -212,22 +213,27 @@ Data_Plotting <- function(data) {
                                                   format(value, nsmall=0, big.mark=",", trim=TRUE)),
                              format(value, nsmall=0, big.mark=",", trim=FALSE))) %>%
     mutate(Val_Label2=paste0(Val_Label,", ",PercLabel,"%")) %>%
-    mutate(Bar_Label=if_else(Party=="O","",Val_Label), Bar_Label_wP=if_else(Party=="O","",Val_Label2))
+    mutate(Bar_Label=Val_Label, Bar_Label_wP=Val_Label2)
+    # mutate(Bar_Label=if_else(Party=="O","",Val_Label), Bar_Label_wP=if_else(Party=="O","",Val_Label2))
   
   Plot_data_labels <- Plot_data2 %>% select(Year_Factor,Party,perc) %>% group_by(Year_Factor) %>% 
     pivot_wider(id_cols=Year_Factor,names_from=Party,values_from=perc) %>% 
     left_join(Plot_data2 %>% group_by(Year_Factor) %>% summarize(sum=sum(value))) %>%
-    mutate(Margin=D-R) %>% select(Year_Factor,Margin,sum) %>%
+    mutate(Margin=D-R) %>%
     mutate(MargLabel=if_else(Margin>0,paste0("D+",format(abs(Margin)*100, nsmall=1, digits=1),"%"),
                              paste0("R+",format(abs(Margin)*100, nsmall=1, digits=1),"%")),
-           MargWin=if_else(Margin>0,"D","R"))
-  return(list(a=Plot_data2,b=Plot_data_labels))
+           MargWin=if_else(Margin>0,"D","R"),
+           Max=if_else(Margin>0,D*sum,R*sum)) %>% select(Year_Factor,Margin,Max,MargLabel,MargWin,sum)
+  
+  Plot_data2 <- Plot_data2 %>% left_join(Plot_data_labels %>% select(Year_Factor,Max,MargLabel,MargWin) %>% 
+                                           bind_cols(Party_Factor=factor("R", levels=c("D","R","O"), labels=c("D","R","O"))))
+  return(list(a=Plot_data2, b=Plot_data_labels))
 }
 
 Plotting <- function(data, ylim, scale_amt, buffer, outfile, labsize=NULL) {
   Datasets <- Data_Plotting(data)
   plot <- ggplot(Datasets$a, mapping=aes(x=Year_Factor, y=value/scale_amt, fill=Party_Factor, label=Bar_Label)) +
-    geom_col() +
+    geom_col(stat="identity", position="dodge", width=.8) +
     scale_fill_manual(name="Party:",
                       labels=c("D"="Democratic","R"="Republican","O"="Other"),
                       values=c("O"="yellow","R"="red","D"="blue"),
@@ -235,8 +241,9 @@ Plotting <- function(data, ylim, scale_amt, buffer, outfile, labsize=NULL) {
     scale_y_continuous(limits=ylim, expand=expansion(add=c(0,0))) +
     labs(title=NULL,
          x=NULL, y=paste0("Votes (",format(scale_amt, digits=0, nsmall=0, big.mark=","),"s)")) +
-    geom_label(data=Datasets$b, mapping=aes(x=Year_Factor, y=sum/scale_amt+buffer, label=MargLabel, color=MargWin), 
-               inherit.aes=FALSE) +
+    geom_text(vjust=-.1, stat="identity", position=position_dodge(width=.8), size=2.6) +
+    geom_label(mapping=aes(x=Year_Factor, y=Max/scale_amt+buffer, label=MargLabel, color=MargWin),
+               inherit.aes=FALSE, size=3) +
     scale_color_manual(name=NULL,
                        labels=c("D","R"),
                        values=c("blue","red")) +
@@ -244,27 +251,27 @@ Plotting <- function(data, ylim, scale_amt, buffer, outfile, labsize=NULL) {
     theme_classic() +
     theme(legend.position="bottom", axis.line.x=element_blank(), axis.ticks.x=element_blank(),
           axis.text.x=element_text(size=10))
-  if (is.null(labsize)) {
-    plot <- plot + geom_text(position=position_stack(vjust=0.5), color="black")
-  } else {
-    plot <- plot + geom_text(data=Datasets$a %>% filter(Year != "Diff"),
-                             position=position_stack(vjust=0.5), color="black") +
-      geom_text(data=Datasets$a %>% filter(Year == "Diff"),
-                position=position_stack(vjust=0.5), color="black", size=labsize)
-  }
+  # if (is.null(labsize)) {
+  #   plot <- plot + geom_text(position=position_stack(vjust=0.5), color="black")
+  # } else {
+  #   plot <- plot + geom_text(data=Datasets$a %>% filter(Year != "Diff"),
+  #                            position=position_stack(vjust=0.5), color="black") +
+  #     geom_text(data=Datasets$a %>% filter(Year == "Diff"),
+  #               position=position_stack(vjust=0.5), color="black", size=labsize)
+  # }
   
-  ggsave(filename=paste0(plot_wd,outfile,".png"), plot=plot,
-         width=5, height=5, units="in", dpi=300)
+  ggsave(filename=paste0(plot_wd,outfile,".eps"), plot=plot,
+         width=5, height=5, units="in")
   plot
 }
 
 ### Bar Plot of Brooklyn Data: ###
 NYS %>% filter(County=="Kings") %>% select(County, Total.20, VoteShift, PercShift, DRVoteShift)
-Plotting(data=NYS %>% filter(County=="Kings"), ylim=c(0,1000), scale_amt=1000, buffer=50, outfile="Bar_Brooklyn")
+Plotting(data=NYS %>% filter(County=="Kings"), ylim=c(-20,800), scale_amt=1000, buffer=70, outfile="Bar_Brooklyn")
 
 ### Bar Plot of Detroit Data: ###
 Detroit %>% select(Total.20, VoteShift, PercShift, DRVoteShift)
-Plotting(data=Detroit, ylim=c(0,300), scale_amt=1000, buffer=20, outfile="Bar_Detroit", labsize=2.3)
+Plotting(data=Detroit, ylim=c(-10,300), scale_amt=1000, buffer=20, outfile="Bar_Detroit", labsize=2.3)
 
 
 
