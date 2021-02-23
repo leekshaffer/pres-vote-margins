@@ -1,0 +1,12 @@
+name: Election-Mapping
+title: Election-Mapping
+username:
+account: leekshaffer
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3684610
+bundleId: 4262078
+url: https://leekshaffer.shinyapps.io/Election-Mapping/
+when: 1614093916.19639
+asMultiple: FALSE
+asStatic: FALSE
