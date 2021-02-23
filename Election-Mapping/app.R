@@ -85,7 +85,7 @@ StateMaps <- function(state,cities=NULL,scalea=10000,scaleb=0.025,focus.county=N
         if (focus.county != "-None-") {
             data(county.map, package="choroplethrMaps", envir=environment())
             focus.FIPS <- unlist(US %>% filter(State==state & County==focus.county) %>% pull(FIPS))
-            outline.df <- county.map[county.map$region==focus.FIPS, ]
+            outline.df <- county.map[county.map$region==as.numeric(focus.FIPS), ]
             map.shift <- map.shift + geom_polygon(data=outline.df, aes(long, lat, group = group), 
                                                   color = "yellow", fill = NA, size = 1.5)
             map.perc <- map.perc + geom_polygon(data=outline.df, aes(long, lat, group = group), 
